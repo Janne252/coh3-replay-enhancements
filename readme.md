@@ -11,3 +11,6 @@
     ```lua
     dofile('replay-enhancements/init.scar')
     ```
+
+# Known issues
+- If there are more than 2 players, changing selected player perspective causes the list of players in the dropdown to go out of sync. This will be fixed later.
