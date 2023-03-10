@@ -1,0 +1,434 @@
+__ReplayEnhancements_UIDataContext = {
+    IsFoWEnabled = true,
+    SimulationRate = {
+        rate = 8.0,
+        display = '1.0x',
+        minimum = 1.0,
+        maximum = 64.0,
+        isMinimum = false,
+        isMaximum = false,
+    },
+    Commands = {
+        ChangeSimulationRate = UI_CreateCommand('_ReplayEnhancements_Command_ChangeSimulationRate'),
+        ToggleFogOfWar = UI_CreateCommand('_ReplayEnhancements_Command_ToggleFogOfWar'),
+        SetLocalPlayer = UI_CreateCommand('_ReplayEnhancements_Command_SetLocalPlayer'),
+    },
+    Command = UI_CreateCommand('_ReplayEnhancements_RouteUICommand'),
+    Players = {},
+    SelectedPlayerIndex = 0,
+    Namespace = 'ReplayEnhancements',
+}
+
+function ReplayEnhancements_InitUIDataContext()
+    for team = 0, 1 do
+        for index = 1, World_GetPlayerCount() do
+            local player = World_GetPlayerAt(index)
+            if Player_GetTeam(player) == team then
+                table.insert(__ReplayEnhancements_UIDataContext.Players, {
+                    displayName = Player_GetDisplayName(player),
+                    id = Player_GetID(player),
+                    index = index,
+                    foreground = UI_GetColourAsString(Player_GetUIColour(player)),
+                })
+            end
+        end
+    end
+end
+
+ function ReplayEnhancements_HideAmbientBuildingMinimapIcons()
+    local eg_ambient_buildings = EGroup_CreateUnique()
+    for i = 0, World_GetNumEntities() - 1 do
+        local entity = World_GetEntity(i)
+        if World_OwnsEntity(entity) and Entity_IsOfType(entity, 'building') and Entity_GetMaxHoldSquadSlots(entity) > 0 then
+            EGroup_Add(eg_ambient_buildings, entity)
+        end
+    end
+    EGroup_EnableMinimapIndicator(eg_ambient_buildings, false)
+ end
+
+function ReplayEnhancements_UIInit()
+    UI_AddChild("", "XamlPresenter", __ReplayEnhancements_UIDataContext.Namespace, { Xaml = [[<Grid 
+            xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" 
+            xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+            VerticalAlignment="Bottom" HorizontalAlignment="Right"
+            Width="270" Height="204"
+        >
+        <Grid.Resources>
+            <Style x:Key="SelectPlayerItem" TargetType="{x:Type TextBlock}">
+                <Setter Property="Margin" Value="12,6,12,6" />
+                <Setter Property="FontFamily" Value="{DynamicResource VinylAllCaps}" />
+            </Style>
+        
+            <Style x:Key="CoreBaseControlStyle" TargetType="{x:Type Control}">
+                <Setter Property="FontSize" Value="16" />
+                <Setter Property="FontFamily" Value="{DynamicResource VinylAllCaps}" />
+            </Style>
+            <Style x:Key="CoreBaseActionControlStyle" TargetType="{x:Type Control}" BasedOn="{StaticResource CoreBaseControlStyle}">
+                <Setter Property="Height" Value="32" />
+                <Setter Property="Padding" Value="12,0,12,0" />
+            </Style>
+           <Style x:Key="CoreCheckboxStyle" TargetType="{x:Type CheckBox}" BasedOn="{StaticResource CoreBaseActionControlStyle}">
+            <Setter Property="Foreground" Value="White" />
+            <Setter Property="OverridesDefaultStyle" Value="True" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type CheckBox}">
+                        <Grid 
+                            Width="{TemplateBinding Width}"
+                            Height="{TemplateBinding Height}"
+                            Margin="0,0,0,4"
+                            HorizontalAlignment="Left"
+                        >
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition />
+                            </Grid.ColumnDefinitions>
+                            <Grid x:Name="MainGrid"
+                                  Width="20" Height="20"
+                                  Margin="6,0,0,0" VerticalAlignment="Center"
+                                  Background="Transparent">
+                                <Rectangle x:Name="Highlight"
+                                           Width="20" Height="20"
+                                           Fill="{StaticResource Gray40Brush}" Visibility="Collapsed" />
+                                <Rectangle x:Name="Outline"
+                                           Width="20" Height="20"
+                                           Stroke="White" StrokeThickness="2" />
+                                <Path x:Name="CheckMark"
+                                      Margin="0,-6,-8,4"
+                                      Style="{StaticResource DefaultCheckMarkPath}" />
+                            </Grid>
+                            <ContentPresenter Grid.Column="1"
+                                              Margin="0,0,0,0" HorizontalAlignment="Left"
+                                              VerticalAlignment="Center">
+                        
+                                <!-- Wrapper StackPanel with background set to Transparent so that the space between [x] label also captures mouse click -->
+                                <ContentPresenter.ContentTemplate>
+                                    <DataTemplate>
+                                        <StackPanel VerticalAlignment="Center" Background="Transparent">
+                                            <TextBlock Margin="8,2,0,0" Text="{TemplateBinding Content}" />
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </ContentPresenter.ContentTemplate>
+                            </ContentPresenter>
+            
+                        </Grid>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsChecked" Value="false">
+                                <Setter TargetName="CheckMark" Property="Visibility" Value="Collapsed" />
+                            </Trigger>
+                            <Trigger Property="IsChecked" Value="{x:Null}">
+                                <Setter TargetName="CheckMark" Property="Data" Value="M 0 7 L 7 0" />
+                            </Trigger>
+                            <Trigger Property="IsMouseOver" Value="true">
+                                <Setter TargetName="Highlight" Property="Visibility" Value="Visible" />
+                                <Setter Property="Foreground" Value="{StaticResource ActionButtonForegroundHighlightBrush}" />
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="true">
+                                <Setter TargetName="Highlight" Property="Visibility" Value="Visible" />
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="false">
+                                <Setter Property="Opacity" Value="0.25" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <Setter Property="esUtility:AudioAttachedProperty.MouseEnterSound" Value="sfx_ui_frontend_highlight_button_play" />
+            <Setter Property="esUtility:AudioAttachedProperty.PreviewMouseLeftButtonUpSound" Value="sfx_ui_frontend_button_small_play" />
+        </Style>    
+               
+            <Style x:Key="SubMenuItem" TargetType="{x:Type MenuItem}" BasedOn="{StaticResource CoreBaseActionControlStyle}">
+                <Setter Property="Background" Value="#FF585858" />
+                <Setter Property="BorderBrush" Value="Transparent" />
+                <Setter Property="FontFamily" Value="{DynamicResource VinylAllCaps}" />
+                <Setter Property="OverridesDefaultStyle" Value="True" />
+                <Setter Property="Height" Value="{Binding [height], FallbackValue=32}" />
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="{x:Type MenuItem}">
+                            <Grid x:Name="templateRoot" Background="{TemplateBinding Background}">
+                                <Border x:Name="borderHighlight"
+                                    BorderBrush="{TemplateBinding BorderBrush}"
+                                    BorderThickness="2"
+                                />
+                            
+                                <ContentPresenter 
+                                    Content="{TemplateBinding Header}"
+                                    ContentStringFormat="{TemplateBinding HeaderStringFormat}"
+                                    RecognizesAccessKey="True"
+                                    SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}"
+                                  HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                  VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                />
+                            </Grid>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsHighlighted" Value="True">
+                                    <Setter TargetName="borderHighlight" Property="Background" Value="{Binding [style][hover][background], FallbackValue=#FF000000}" />
+                                    <Setter TargetName="borderHighlight" Property="BorderBrush" Value="{Binding [style][hover][border], FallbackValue=#FFf1c51a}" />
+                                    <Setter Property="Foreground" Value="{DynamicResource ActionButtonForegroundHighlightBrush}" />
+                                    <Setter Property="Opacity" Value="{Binding [style][hover][opacity], FallbackValue=1.0}" />
+                                </Trigger>
+                                <Trigger Property="IsEnabled" Value="False">
+                                    <Setter Property="Background" Value="DarkGray" />
+                                    <Setter Property="BorderBrush" Value="{Binding [style][disabled][border], FallbackValue=DarkGray}" />
+                                    <Setter Property="Foreground" Value="{DynamicResource ActionButtonForegroundDisabledBrush}" />
+                                    <Setter Property="Opacity" Value="0.25" />
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+                <Setter Property="esUtility:AudioAttachedProperty.MouseEnterSound" Value="sfx_ui_frontend_highlight_button_play" />
+                <Setter Property="esUtility:AudioAttachedProperty.PreviewMouseLeftButtonUpSound" Value="sfx_ui_frontend_button_small_play" />
+            </Style>
+            
+            <Style x:Key="CoreComboBoxStyle"
+               BasedOn="{StaticResource ControlText}"
+               TargetType="ComboBox">
+                <Setter Property="Background" Value="{StaticResource ComboBoxDefaultBackgroundBrush}" />
+                <Setter Property="FontSize" Value="16" />
+                <Setter Property="Foreground" Value="{StaticResource ComboBoxDefaultTextBrush}" />
+                <Setter Property="OverridesDefaultStyle" Value="true" />
+                <Setter Property="ScrollViewer.CanContentScroll" Value="true" />
+                <Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Auto" />
+                <Setter Property="ScrollViewer.VerticalScrollBarVisibility" Value="Auto" />
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="ComboBox">
+                            <Grid Width="{TemplateBinding Width}" Height="{TemplateBinding Height}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition />
+                                    <ColumnDefinition Width="45" />
+                                </Grid.ColumnDefinitions>
+                                <ToggleButton x:Name="ToggleButton"
+                                              Grid.ColumnSpan="2"
+                                              Background="{TemplateBinding Background}"
+                                              ClickMode="Press" Focusable="false"
+                                              IsChecked="{Binding Path=IsDropDownOpen, Mode=TwoWay, RelativeSource={RelativeSource TemplatedParent}}"
+                                              Tag="UINavigationSettingContainerTarget"
+                                              Template="{StaticResource FrontEndComboBoxToggleButton}" />
+                                <ContentPresenter x:Name="ContentSite"
+                                                  Margin="8,0" HorizontalAlignment="Left"
+                                                  VerticalAlignment="Center"
+                                                  Content="{TemplateBinding SelectionBoxItem}"
+                                                  ContentStringFormat="{TemplateBinding SelectionBoxItemStringFormat}"
+                                                  ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}"
+                                                  ContentTemplateSelector="{TemplateBinding ItemTemplateSelector}"
+                                                  IsHitTestVisible="False" />
+                                <Popup x:Name="Popup"
+                                       Grid.ColumnSpan="2"
+                                       AllowsTransparency="True" Focusable="False"
+                                       IsOpen="{TemplateBinding IsDropDownOpen}"
+                                       Placement="Bottom" PopupAnimation="Slide">
+                                    <!--  TODO: fix DIP and template binding, then set MaxHeight="{TemplateBinding MaxDropDownHeight}"  -->
+                                    <Grid x:Name="DropDown"
+                                          MinWidth="{TemplateBinding ActualWidth}"
+                                          MaxHeight="350"
+                                          SnapsToDevicePixels="True">
+                                        <Border x:Name="DropDownBorder" Background="{StaticResource ComboBoxPopupBackgroundBrush}" />
+                                        <ScrollViewer Margin="1"
+                                                      SnapsToDevicePixels="True"
+                                                      Style="{StaticResource FrontEndScrollViewer}">
+                                            <StackPanel IsItemsHost="True" KeyboardNavigation.DirectionalNavigation="Contained" />
+                                        </ScrollViewer>
+                                    </Grid>
+                                </Popup>
+                            </Grid>
+                            <ControlTemplate.Triggers>
+                                <Trigger SourceName="ToggleButton" Property="IsMouseOver" Value="True">
+                                    <Setter Property="Foreground" Value="{StaticResource ComboBoxHighlightTextBrush}" />
+                                </Trigger>
+                                <Trigger SourceName="ToggleButton" Property="IsChecked" Value="True">
+                                    <Setter Property="Foreground" Value="{StaticResource ComboBoxDefaultTextBrush}" />
+                                </Trigger>
+                                <Trigger Property="HasItems" Value="false">
+                                    <Setter TargetName="DropDownBorder" Property="MinHeight" Value="{Binding Source={x:Static w:GameUIApp.Scale}, Path=UserDIP, Converter={StaticResource WidthHeightByScale}, ConverterParameter=95}" />
+                                </Trigger>
+                                <Trigger Property="IsEnabled" Value="false">
+                                    <Setter TargetName="ContentSite" Property="Opacity" Value="0.3" />
+                                </Trigger>
+                                <Trigger Property="IsGrouping" Value="true">
+                                    <Setter Property="ScrollViewer.CanContentScroll" Value="false" />
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+                <Setter Property="esUtility:AudioAttachedProperty.MouseEnterSound" Value="sfx_ui_frontend_highlight_button_play" />
+                <Setter Property="esUtility:AudioAttachedProperty.PreviewKeyDownSound" Value="sfx_ui_frontend_highlight_comboBoxItem_play" />
+            </Style>
+        
+            <Style x:Key="CoreComboBoxItemStyle" TargetType="ComboBoxItem">
+                <Setter Property="OverridesDefaultStyle" Value="true" />
+                <Setter Property="SnapsToDevicePixels" Value="true" />
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="ComboBoxItem">
+                            <Grid Tag="UINavigationSettingControl">
+                                <Border x:Name="Border"
+                                        Background="{StaticResource ComboBoxDefaultBackgroundBrush}"
+                                        BorderBrush="Transparent" BorderThickness="1"
+                                        SnapsToDevicePixels="true">
+                                    <ContentPresenter x:Name="Content"
+                                                      Margin="0"
+                                                      HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                                      VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                        />
+                                </Border>
+        
+                                <Control Style="{StaticResource UINavigationSelectedOverlayForGridParent}" />
+                            </Grid>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsHighlighted" Value="true">
+                                    <Setter TargetName="Border" Property="Background" Value="{StaticResource ComboBoxHighlightBackgroundBrush}" />
+                                    <Setter TargetName="Border" Property="BorderBrush" Value="{StaticResource ComboBoxHighlightBorderBrush}" />
+                                    <Setter Property="Foreground" Value="{StaticResource ComboBoxHighlightTextBrush}" />
+                                </Trigger>
+                                <Trigger Property="IsMouseOver" Value="true">
+                                    <Setter TargetName="Border" Property="Background" Value="{StaticResource ComboBoxHighlightBackgroundBrush}" />
+                                    <Setter TargetName="Border" Property="BorderBrush" Value="{StaticResource ComboBoxHighlightBorderBrush}" />
+                                    <Setter Property="Foreground" Value="{StaticResource ComboBoxHighlightTextBrush}" />
+                                </Trigger>
+                                <Trigger Property="IsSelected" Value="true">
+                                    <Setter TargetName="Border" Property="Background" Value="{StaticResource ComboBoxHighlightBackgroundBrush}" />
+                                    <Setter TargetName="Border" Property="BorderBrush" Value="{StaticResource ComboBoxHighlightBorderBrush}" />
+                                    <Setter Property="Foreground" Value="{StaticResource ComboBoxHighlightTextBrush}" />
+        
+                                </Trigger>
+                                <Trigger Property="IsEnabled" Value="false">
+                                    <Setter TargetName="Border" Property="Opacity" Value="0.3" />
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+                <Setter Property="esUtility:AudioAttachedProperty.MouseEnterSound" Value="sfx_ui_frontend_highlight_comboBoxItem_play" />
+                <Setter Property="esUtility:AudioAttachedProperty.PreviewKeyDownSound" Value="sfx_ui_frontend_button_small_play" />
+            </Style>
+        </Grid.Resources>
+        
+        <Grid.Background>
+            <ImageBrush Stretch="Fill" ImageSource="pack://application:,,,/WPFGUI;component/icons/hud/selection_card_bg_wide.png" />
+        </Grid.Background>
+        <Grid Margin="12,24,12,12">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="auto"></ColumnDefinition>
+                <ColumnDefinition Width="auto"></ColumnDefinition>
+            </Grid.ColumnDefinitions>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="auto"></RowDefinition>
+                <RowDefinition Height="auto"></RowDefinition>
+                <RowDefinition Height="*"></RowDefinition>
+            </Grid.RowDefinitions>
+            <ComboBox 
+                Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2"
+                Style="{StaticResource CoreComboBoxStyle}" 
+                ItemContainerStyle="{StaticResource CoreComboBoxItemStyle}"
+                SelectedIndex="{Binding [SelectedPlayerIndex]}"
+                Name="SelectedPlayer"
+                Height="36"
+                Margin="0,0,0,8"
+            >
+                <!-- No other apparent way of getting Selected event with data. -->
+                <ComboBoxItem Name="1" Visibility="{Binding [Players][0], Converter={StaticResource NotNullToVis}, FallbackValue=Collapsed}"><TextBlock Text="{Binding [Players][0][displayName]}" Foreground="{Binding [Players][0][foreground]}" Style="{StaticResource SelectPlayerItem}" /></ComboBoxItem>
+                <ComboBoxItem Name="2" Visibility="{Binding [Players][1], Converter={StaticResource NotNullToVis}, FallbackValue=Collapsed}"><TextBlock Text="{Binding [Players][1][displayName]}" Foreground="{Binding [Players][1][foreground]}" Style="{StaticResource SelectPlayerItem}" /></ComboBoxItem>
+                <ComboBoxItem Name="3" Visibility="{Binding [Players][2], Converter={StaticResource NotNullToVis}, FallbackValue=Collapsed}"><TextBlock Text="{Binding [Players][2][displayName]}" Foreground="{Binding [Players][2][foreground]}" Style="{StaticResource SelectPlayerItem}" /></ComboBoxItem>
+                <ComboBoxItem Name="4" Visibility="{Binding [Players][3], Converter={StaticResource NotNullToVis}, FallbackValue=Collapsed}"><TextBlock Text="{Binding [Players][3][displayName]}" Foreground="{Binding [Players][3][foreground]}" Style="{StaticResource SelectPlayerItem}" /></ComboBoxItem>
+                <ComboBoxItem Name="5" Visibility="{Binding [Players][4], Converter={StaticResource NotNullToVis}, FallbackValue=Collapsed}"><TextBlock Text="{Binding [Players][4][displayName]}" Foreground="{Binding [Players][4][foreground]}" Style="{StaticResource SelectPlayerItem}" /></ComboBoxItem>
+                <ComboBoxItem Name="6" Visibility="{Binding [Players][5], Converter={StaticResource NotNullToVis}, FallbackValue=Collapsed}"><TextBlock Text="{Binding [Players][5][displayName]}" Foreground="{Binding [Players][5][foreground]}" Style="{StaticResource SelectPlayerItem}" /></ComboBoxItem>
+                <ComboBoxItem Name="7" Visibility="{Binding [Players][6], Converter={StaticResource NotNullToVis}, FallbackValue=Collapsed}"><TextBlock Text="{Binding [Players][6][displayName]}" Foreground="{Binding [Players][6][foreground]}" Style="{StaticResource SelectPlayerItem}" /></ComboBoxItem>
+                <ComboBoxItem Name="8" Visibility="{Binding [Players][7], Converter={StaticResource NotNullToVis}, FallbackValue=Collapsed}"><TextBlock Text="{Binding [Players][7][displayName]}" Foreground="{Binding [Players][7][foreground]}" Style="{StaticResource SelectPlayerItem}" /></ComboBoxItem>
+            </ComboBox>
+        
+            <CheckBox Name="IsFoWEnabled" Grid.Row="1" Grid.Column="0" Style="{StaticResource CoreCheckboxStyle}" Command="{Binding [Commands][ToggleFogOfWar]}">
+                Fog of War
+            </CheckBox>
+            <StackPanel Grid.Row="1" Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right">
+                <MenuItem 
+                    Style="{StaticResource SubMenuItem}" 
+                    Header="-" 
+                    Width="32"
+                    Height="32"
+                    Margin="0"
+                    Command="{Binding [Commands][ChangeSimulationRate]}" 
+                    CommandParameter="-" 
+                    HorizontalContentAlignment="Center"
+                    VerticalContentAlignment="Center"
+                    Foreground="White"
+                    IsEnabled="{Binding [SimulationRate][isMinimum], Converter={StaticResource InvBool}}"
+                    BorderBrush="{StaticResource Gray10Brush}"
+                />
+            
+                <TextBlock Name="SimulationSpeedDisplay" MinWidth="60" TextAlignment="Center" FontSize="16" Foreground="White" FontFamily="monospace" VerticalAlignment="Center" />
+            
+                <MenuItem 
+                    Style="{StaticResource SubMenuItem}" 
+                    Header="+" 
+                    Width="32"
+                    Height="32"
+                    Margin="0"
+                    Command="{Binding [Commands][ChangeSimulationRate]}" 
+                    CommandParameter="+" 
+                    HorizontalContentAlignment="Center"
+                    VerticalContentAlignment="Center"
+                    Foreground="White"
+                    IsEnabled="{Binding [SimulationRate][isMaximum], Converter={StaticResource InvBool}}"
+                    BorderBrush="{StaticResource Gray10Brush}"
+                />
+            </StackPanel>
+        </Grid>
+    </Grid>]], DataContext = UI_CreateDataContext(__ReplayEnhancements_UIDataContext) })
+    UI_AddEventHandler(__ReplayEnhancements_UIDataContext.Namespace .. '.SelectedPlayer.1', 'Selected', '_ReplayEnhancements_Command_SetSelectedPlayer')
+    UI_AddEventHandler(__ReplayEnhancements_UIDataContext.Namespace .. '.SelectedPlayer.2', 'Selected', '_ReplayEnhancements_Command_SetSelectedPlayer')
+    UI_AddEventHandler(__ReplayEnhancements_UIDataContext.Namespace .. '.SelectedPlayer.3', 'Selected', '_ReplayEnhancements_Command_SetSelectedPlayer')
+    UI_AddEventHandler(__ReplayEnhancements_UIDataContext.Namespace .. '.SelectedPlayer.4', 'Selected', '_ReplayEnhancements_Command_SetSelectedPlayer')
+    UI_AddEventHandler(__ReplayEnhancements_UIDataContext.Namespace .. '.SelectedPlayer.5', 'Selected', '_ReplayEnhancements_Command_SetSelectedPlayer')
+    UI_AddEventHandler(__ReplayEnhancements_UIDataContext.Namespace .. '.SelectedPlayer.6', 'Selected', '_ReplayEnhancements_Command_SetSelectedPlayer')
+    UI_AddEventHandler(__ReplayEnhancements_UIDataContext.Namespace .. '.SelectedPlayer.7', 'Selected', '_ReplayEnhancements_Command_SetSelectedPlayer')
+    UI_AddEventHandler(__ReplayEnhancements_UIDataContext.Namespace .. '.SelectedPlayer.8', 'Selected', '_ReplayEnhancements_Command_SetSelectedPlayer')
+end
+
+function ReplayEnhancements_UpdateUIDataContext()
+    -- Updating data context with UI_SetDataContext causes the combobox with bound foreground color to lose color and become transparent
+    -- until mouse-overed
+    UI_SetPropertyValue(__ReplayEnhancements_UIDataContext.Namespace .. '.IsFoWEnabled', 'IsChecked', __ReplayEnhancements_UIDataContext.IsFoWEnabled)
+    UI_SetPropertyValue(__ReplayEnhancements_UIDataContext.Namespace .. '.SimulationSpeedDisplay', 'Text', __ReplayEnhancements_UIDataContext.SimulationRate.display)
+end
+
+function _ReplayEnhancements_Command_ToggleFogOfWar()
+    print('_ReplayEnhancements_Command_ToggleFogOfWar')
+    __ReplayEnhancements_UIDataContext.IsFoWEnabled = not __ReplayEnhancements_UIDataContext.IsFoWEnabled
+    if __ReplayEnhancements_UIDataContext.IsFoWEnabled then
+        FOW_UIUnRevealAll()
+    else
+        FOW_UIRevealAll()
+    end
+    ReplayEnhancements_UpdateUIDataContext()
+end
+
+function _ReplayEnhancements_Command_ChangeSimulationRate(rate)
+    print('_ReplayEnhancements_Command_ChangeSimulationRate')
+    if rate == '+' then
+        __ReplayEnhancements_UIDataContext.SimulationRate.rate = math.min(__ReplayEnhancements_UIDataContext.SimulationRate.maximum, __ReplayEnhancements_UIDataContext.SimulationRate.rate * 2)
+    elseif rate == '-' then
+        __ReplayEnhancements_UIDataContext.SimulationRate.rate = math.max(__ReplayEnhancements_UIDataContext.SimulationRate.minimum, __ReplayEnhancements_UIDataContext.SimulationRate.rate / 2)
+    end
+    Game_SetSimRate(__ReplayEnhancements_UIDataContext.SimulationRate.rate)
+    __ReplayEnhancements_UIDataContext.SimulationRate.display = string.format('%sx', __ReplayEnhancements_UIDataContext.SimulationRate.rate / 8)
+    __ReplayEnhancements_UIDataContext.SimulationRate.isMinimum = __ReplayEnhancements_UIDataContext.SimulationRate.rate == __ReplayEnhancements_UIDataContext.SimulationRate.minimum
+    __ReplayEnhancements_UIDataContext.SimulationRate.isMaximum = __ReplayEnhancements_UIDataContext.SimulationRate.rate == __ReplayEnhancements_UIDataContext.SimulationRate.maximum
+    ReplayEnhancements_UpdateUIDataContext()
+end
+
+---@param parameter string
+function _ReplayEnhancements_Command_SetSelectedPlayer(parameter)
+    local index = tonumber(parameter) --[[@as number]]
+    Game_RequestSetLocalPlayer(World_GetPlayerAt(index))
+    __ReplayEnhancements_UIDataContext.SelectedPlayerIndex = index - 1
+    ReplayEnhancements_UpdateUIDataContext()
+end
+
+ReplayEnhancements_InitUIDataContext()
+ReplayEnhancements_UIInit()
+ReplayEnhancements_HideAmbientBuildingMinimapIcons()
+ReplayEnhancements_UpdateUIDataContext()
