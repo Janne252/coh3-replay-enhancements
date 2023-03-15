@@ -15,24 +15,29 @@ __ReplayEnhancements_UIDataContext = {
     },
     Command = UI_CreateCommand('_ReplayEnhancements_RouteUICommand'),
     Players = {},
-    SelectedPlayerIndex = 0,
+    SelectedPlayer = {},
     Namespace = 'ReplayEnhancements',
 }
 
 function ReplayEnhancements_InitUIDataContext()
-    for team = 0, 1 do
-        for index = 1, World_GetPlayerCount() do
-            local player = World_GetPlayerAt(index)
-            if Player_GetTeam(player) == team then
-                table.insert(__ReplayEnhancements_UIDataContext.Players, {
-                    displayName = Player_GetDisplayName(player),
-                    id = Player_GetID(player),
-                    index = index,
-                    foreground = UI_GetColourAsString(Player_GetUIColour(player)),
-                })
-            end
-        end
-    end
+for index = 1, World_GetPlayerCount() do
+    local player = World_GetPlayerAt(index)
+    local team = Player_GetTeam(player)
+    table.insert(__ReplayEnhancements_UIDataContext.Players, {
+        id = Player_GetID(player),
+        index = index,
+        displayName = Player_GetDisplayName(player),
+        foreground = UI_GetColourAsString(Player_GetUIColour(player)),
+    })
+    print(string.format('team: %s, index: %s, id: %s, name: %s, race: %s', 
+        team, 
+        index, 
+        Player_GetID(player), 
+        Loc_ToAnsi(Player_GetDisplayName(player)), 
+        Player_GetRaceName(player)
+    ))
+end
+    __ReplayEnhancements_UIDataContext.SelectedPlayer = __ReplayEnhancements_UIDataContext.Players[1]
 end
 
  function ReplayEnhancements_HideAmbientBuildingMinimapIcons()
@@ -51,7 +56,7 @@ function ReplayEnhancements_UIInit()
             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" 
             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
             VerticalAlignment="Bottom" HorizontalAlignment="Right"
-            Width="270" Height="204"
+            Margin="0,0,860,0"
         >
         <Grid.Resources>
             <Style x:Key="SelectPlayerItem" TargetType="{x:Type TextBlock}">
@@ -207,14 +212,6 @@ function ReplayEnhancements_UIInit()
                                               IsChecked="{Binding Path=IsDropDownOpen, Mode=TwoWay, RelativeSource={RelativeSource TemplatedParent}}"
                                               Tag="UINavigationSettingContainerTarget"
                                               Template="{StaticResource FrontEndComboBoxToggleButton}" />
-                                <ContentPresenter x:Name="ContentSite"
-                                                  Margin="8,0" HorizontalAlignment="Left"
-                                                  VerticalAlignment="Center"
-                                                  Content="{TemplateBinding SelectionBoxItem}"
-                                                  ContentStringFormat="{TemplateBinding SelectionBoxItemStringFormat}"
-                                                  ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}"
-                                                  ContentTemplateSelector="{TemplateBinding ItemTemplateSelector}"
-                                                  IsHitTestVisible="False" />
                                 <Popup x:Name="Popup"
                                        Grid.ColumnSpan="2"
                                        AllowsTransparency="True" Focusable="False"
@@ -243,9 +240,6 @@ function ReplayEnhancements_UIInit()
                                 </Trigger>
                                 <Trigger Property="HasItems" Value="false">
                                     <Setter TargetName="DropDownBorder" Property="MinHeight" Value="{Binding Source={x:Static w:GameUIApp.Scale}, Path=UserDIP, Converter={StaticResource WidthHeightByScale}, ConverterParameter=95}" />
-                                </Trigger>
-                                <Trigger Property="IsEnabled" Value="false">
-                                    <Setter TargetName="ContentSite" Property="Opacity" Value="0.3" />
                                 </Trigger>
                                 <Trigger Property="IsGrouping" Value="true">
                                     <Setter Property="ScrollViewer.CanContentScroll" Value="false" />
@@ -306,76 +300,82 @@ function ReplayEnhancements_UIInit()
                 <Setter Property="esUtility:AudioAttachedProperty.PreviewKeyDownSound" Value="sfx_ui_frontend_button_small_play" />
             </Style>
         </Grid.Resources>
-        
-        <Grid.Background>
-            <ImageBrush Stretch="Fill" ImageSource="pack://application:,,,/WPFGUI;component/icons/hud/selection_card_bg_wide.png" />
-        </Grid.Background>
-        <Grid Margin="12,24,12,12">
+        <Grid Width="270" Height="206" HorizontalAlignment="Right">
+            <Grid.Background>
+                <ImageBrush Stretch="Fill" ImageSource="pack://application:,,,/WPFGUI;component/icons/hud/selection_card_bg_wide.png" />
+            </Grid.Background>
+            <Grid Margin="12,24,12,12">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="auto"></ColumnDefinition>
-                <ColumnDefinition Width="auto"></ColumnDefinition>
-            </Grid.ColumnDefinitions>
-            <Grid.RowDefinitions>
-                <RowDefinition Height="auto"></RowDefinition>
-                <RowDefinition Height="auto"></RowDefinition>
-                <RowDefinition Height="*"></RowDefinition>
-            </Grid.RowDefinitions>
-            <ComboBox 
-                Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2"
-                Style="{StaticResource CoreComboBoxStyle}" 
-                ItemContainerStyle="{StaticResource CoreComboBoxItemStyle}"
-                SelectedIndex="{Binding [SelectedPlayerIndex]}"
-                Name="SelectedPlayer"
-                Height="36"
-                Margin="0,0,0,8"
-            >
-                <!-- No other apparent way of getting Selected event with data. -->
-                <ComboBoxItem Name="1" Visibility="{Binding [Players][0], Converter={StaticResource NotNullToVis}, FallbackValue=Collapsed}"><TextBlock Text="{Binding [Players][0][displayName]}" Foreground="{Binding [Players][0][foreground]}" Style="{StaticResource SelectPlayerItem}" /></ComboBoxItem>
-                <ComboBoxItem Name="2" Visibility="{Binding [Players][1], Converter={StaticResource NotNullToVis}, FallbackValue=Collapsed}"><TextBlock Text="{Binding [Players][1][displayName]}" Foreground="{Binding [Players][1][foreground]}" Style="{StaticResource SelectPlayerItem}" /></ComboBoxItem>
-                <ComboBoxItem Name="3" Visibility="{Binding [Players][2], Converter={StaticResource NotNullToVis}, FallbackValue=Collapsed}"><TextBlock Text="{Binding [Players][2][displayName]}" Foreground="{Binding [Players][2][foreground]}" Style="{StaticResource SelectPlayerItem}" /></ComboBoxItem>
-                <ComboBoxItem Name="4" Visibility="{Binding [Players][3], Converter={StaticResource NotNullToVis}, FallbackValue=Collapsed}"><TextBlock Text="{Binding [Players][3][displayName]}" Foreground="{Binding [Players][3][foreground]}" Style="{StaticResource SelectPlayerItem}" /></ComboBoxItem>
-                <ComboBoxItem Name="5" Visibility="{Binding [Players][4], Converter={StaticResource NotNullToVis}, FallbackValue=Collapsed}"><TextBlock Text="{Binding [Players][4][displayName]}" Foreground="{Binding [Players][4][foreground]}" Style="{StaticResource SelectPlayerItem}" /></ComboBoxItem>
-                <ComboBoxItem Name="6" Visibility="{Binding [Players][5], Converter={StaticResource NotNullToVis}, FallbackValue=Collapsed}"><TextBlock Text="{Binding [Players][5][displayName]}" Foreground="{Binding [Players][5][foreground]}" Style="{StaticResource SelectPlayerItem}" /></ComboBoxItem>
-                <ComboBoxItem Name="7" Visibility="{Binding [Players][6], Converter={StaticResource NotNullToVis}, FallbackValue=Collapsed}"><TextBlock Text="{Binding [Players][6][displayName]}" Foreground="{Binding [Players][6][foreground]}" Style="{StaticResource SelectPlayerItem}" /></ComboBoxItem>
-                <ComboBoxItem Name="8" Visibility="{Binding [Players][7], Converter={StaticResource NotNullToVis}, FallbackValue=Collapsed}"><TextBlock Text="{Binding [Players][7][displayName]}" Foreground="{Binding [Players][7][foreground]}" Style="{StaticResource SelectPlayerItem}" /></ComboBoxItem>
-            </ComboBox>
-        
-            <CheckBox Name="IsFoWEnabled" Grid.Row="1" Grid.Column="0" Style="{StaticResource CoreCheckboxStyle}" Command="{Binding [Commands][ToggleFogOfWar]}">
-                Fog of War
-            </CheckBox>
-            <StackPanel Grid.Row="1" Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right">
-                <MenuItem 
-                    Style="{StaticResource SubMenuItem}" 
-                    Header="-" 
-                    Width="32"
-                    Height="32"
-                    Margin="0"
-                    Command="{Binding [Commands][ChangeSimulationRate]}" 
-                    CommandParameter="-" 
-                    HorizontalContentAlignment="Center"
-                    VerticalContentAlignment="Center"
-                    Foreground="White"
-                    IsEnabled="{Binding [SimulationRate][isMinimum], Converter={StaticResource InvBool}}"
-                    BorderBrush="{StaticResource Gray10Brush}"
-                />
-            
-                <TextBlock Name="SimulationSpeedDisplay" MinWidth="60" TextAlignment="Center" FontSize="16" Foreground="White" FontFamily="monospace" VerticalAlignment="Center" />
-            
-                <MenuItem 
-                    Style="{StaticResource SubMenuItem}" 
-                    Header="+" 
-                    Width="32"
-                    Height="32"
-                    Margin="0"
-                    Command="{Binding [Commands][ChangeSimulationRate]}" 
-                    CommandParameter="+" 
-                    HorizontalContentAlignment="Center"
-                    VerticalContentAlignment="Center"
-                    Foreground="White"
-                    IsEnabled="{Binding [SimulationRate][isMaximum], Converter={StaticResource InvBool}}"
-                    BorderBrush="{StaticResource Gray10Brush}"
-                />
-            </StackPanel>
+                    <ColumnDefinition Width="auto"></ColumnDefinition>
+                    <ColumnDefinition Width="auto"></ColumnDefinition>
+                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="auto"></RowDefinition>
+                    <RowDefinition Height="auto"></RowDefinition>
+                    <RowDefinition Height="*"></RowDefinition>
+                </Grid.RowDefinitions>
+                
+                <Grid Grid.Row="0" Height="36" Grid.Column="0" Grid.ColumnSpan="2" Width="246" Margin="0,0,0,8">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"></ColumnDefinition>
+                        <ColumnDefinition Width="48"></ColumnDefinition>
+                    </Grid.ColumnDefinitions>
+                    <ComboBox 
+                        Grid.Column="0" Grid.ColumnSpan="2"
+                        Style="{StaticResource CoreComboBoxStyle}" 
+                        ItemContainerStyle="{StaticResource CoreComboBoxItemStyle}"
+                        SelectedIndex="0"
+                        Name="SelectedPlayer"
+                    >
+                        <!-- No other apparent way of getting Selected event with data. -->
+                        <ComboBoxItem Name="1" Visibility="{Binding [Players][0], Converter={StaticResource NotNullToVis}, FallbackValue=Collapsed}"><TextBlock Text="{Binding [Players][0][displayName]}" Foreground="{Binding [Players][0][foreground]}" Style="{StaticResource SelectPlayerItem}" /></ComboBoxItem>
+                        <ComboBoxItem Name="3" Visibility="{Binding [Players][2], Converter={StaticResource NotNullToVis}, FallbackValue=Collapsed}"><TextBlock Text="{Binding [Players][2][displayName]}" Foreground="{Binding [Players][2][foreground]}" Style="{StaticResource SelectPlayerItem}" /></ComboBoxItem>
+                        <ComboBoxItem Name="5" Visibility="{Binding [Players][4], Converter={StaticResource NotNullToVis}, FallbackValue=Collapsed}"><TextBlock Text="{Binding [Players][4][displayName]}" Foreground="{Binding [Players][4][foreground]}" Style="{StaticResource SelectPlayerItem}" /></ComboBoxItem>
+                        <ComboBoxItem Name="7" Visibility="{Binding [Players][6], Converter={StaticResource NotNullToVis}, FallbackValue=Collapsed}"><TextBlock Text="{Binding [Players][6][displayName]}" Foreground="{Binding [Players][6][foreground]}" Style="{StaticResource SelectPlayerItem}" /></ComboBoxItem>
+                        <ComboBoxItem Name="2" Visibility="{Binding [Players][1], Converter={StaticResource NotNullToVis}, FallbackValue=Collapsed}"><TextBlock Text="{Binding [Players][1][displayName]}" Foreground="{Binding [Players][1][foreground]}" Style="{StaticResource SelectPlayerItem}" /></ComboBoxItem>
+                        <ComboBoxItem Name="4" Visibility="{Binding [Players][3], Converter={StaticResource NotNullToVis}, FallbackValue=Collapsed}"><TextBlock Text="{Binding [Players][3][displayName]}" Foreground="{Binding [Players][3][foreground]}" Style="{StaticResource SelectPlayerItem}" /></ComboBoxItem>
+                        <ComboBoxItem Name="6" Visibility="{Binding [Players][5], Converter={StaticResource NotNullToVis}, FallbackValue=Collapsed}"><TextBlock Text="{Binding [Players][5][displayName]}" Foreground="{Binding [Players][5][foreground]}" Style="{StaticResource SelectPlayerItem}" /></ComboBoxItem>
+                        <ComboBoxItem Name="8" Visibility="{Binding [Players][7], Converter={StaticResource NotNullToVis}, FallbackValue=Collapsed}"><TextBlock Text="{Binding [Players][7][displayName]}" Foreground="{Binding [Players][7][foreground]}" Style="{StaticResource SelectPlayerItem}" /></ComboBoxItem>
+                    </ComboBox>
+                    <TextBlock FontSize="16" Grid.Column="0" Name="SelectedPlayerDisplay" VerticalAlignment="Center" Margin="8,0,0,0" FontFamily="{DynamicResource VinylAllCaps}" IsHitTestVisible="False" />
+                </Grid>
+                <CheckBox Name="IsFoWEnabled" Grid.Row="1" Grid.Column="0" Style="{StaticResource CoreCheckboxStyle}" Command="{Binding [Commands][ToggleFogOfWar]}">
+                    Fog of War
+                </CheckBox>
+                <StackPanel Grid.Row="1" Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right">
+                    <MenuItem 
+                        Style="{StaticResource SubMenuItem}" 
+                        Header="-" 
+                        Width="32"
+                        Height="32"
+                        Margin="0"
+                        Command="{Binding [Commands][ChangeSimulationRate]}" 
+                        CommandParameter="-" 
+                        HorizontalContentAlignment="Center"
+                        VerticalContentAlignment="Center"
+                        Foreground="White"
+                        IsEnabled="{Binding [SimulationRate][isMinimum], Converter={StaticResource InvBool}}"
+                        BorderBrush="{StaticResource Gray10Brush}"
+                    />
+                
+                    <TextBlock Name="SimulationSpeedDisplay" MinWidth="60" TextAlignment="Center" FontSize="16" Foreground="White" FontFamily="monospace" VerticalAlignment="Center" />
+                
+                    <MenuItem 
+                        Style="{StaticResource SubMenuItem}" 
+                        Header="+" 
+                        Width="32"
+                        Height="32"
+                        Margin="0"
+                        Command="{Binding [Commands][ChangeSimulationRate]}" 
+                        CommandParameter="+" 
+                        HorizontalContentAlignment="Center"
+                        VerticalContentAlignment="Center"
+                        Foreground="White"
+                        IsEnabled="{Binding [SimulationRate][isMaximum], Converter={StaticResource InvBool}}"
+                        BorderBrush="{StaticResource Gray10Brush}"
+                    />
+                </StackPanel>
+            </Grid>
         </Grid>
     </Grid>]], DataContext = UI_CreateDataContext(__ReplayEnhancements_UIDataContext) })
     UI_AddEventHandler(__ReplayEnhancements_UIDataContext.Namespace .. '.SelectedPlayer.1', 'Selected', '_ReplayEnhancements_Command_SetSelectedPlayer')
@@ -393,6 +393,9 @@ function ReplayEnhancements_UpdateUIDataContext()
     -- until mouse-overed
     UI_SetPropertyValue(__ReplayEnhancements_UIDataContext.Namespace .. '.IsFoWEnabled', 'IsChecked', __ReplayEnhancements_UIDataContext.IsFoWEnabled)
     UI_SetPropertyValue(__ReplayEnhancements_UIDataContext.Namespace .. '.SimulationSpeedDisplay', 'Text', __ReplayEnhancements_UIDataContext.SimulationRate.display)
+
+    UI_SetPropertyValue(__ReplayEnhancements_UIDataContext.Namespace .. '.SelectedPlayerDisplay', 'Text', __ReplayEnhancements_UIDataContext.SelectedPlayer.displayName)
+    UI_SetPropertyValue(__ReplayEnhancements_UIDataContext.Namespace .. '.SelectedPlayerDisplay', 'Foreground', __ReplayEnhancements_UIDataContext.SelectedPlayer.foreground)
 end
 
 function _ReplayEnhancements_Command_ToggleFogOfWar()
@@ -423,8 +426,11 @@ end
 ---@param parameter string
 function _ReplayEnhancements_Command_SetSelectedPlayer(parameter)
     local index = tonumber(parameter) --[[@as number]]
-    Game_RequestSetLocalPlayer(World_GetPlayerAt(index))
-    __ReplayEnhancements_UIDataContext.SelectedPlayerIndex = index - 1
+    if Game_GetLocalPlayerID() ~= __ReplayEnhancements_UIDataContext.Players[index].id then
+        Game_RequestSetLocalPlayer(World_GetPlayerAt(index))
+        __ReplayEnhancements_UIDataContext.SelectedPlayer = __ReplayEnhancements_UIDataContext.Players[index]
+    end
+    
     ReplayEnhancements_UpdateUIDataContext()
 end
 
