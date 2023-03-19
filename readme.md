@@ -13,3 +13,7 @@
     - Console hotkey can be customized by editing `<..>\steamapps\common\Company of Heroes 3\App.ini` file with e.g. Notepad++ (before launching the game)
     - e.g. `consoleKey = CONTROL+SHIFT+SPACE` should work with almost any keyboard regardless of the keyboard layout if the default `Ctrl+Shift+Grave` doesn't work
 1. Close the in-game console & unpause the game
+
+[<img src="screenshots/20230319194449_1.jpg" width="512" />](screenshots/20230319194449_1.jpg)
+[<img src="screenshots/20230319194451_1.jpg" width="512" />](screenshots/20230319194451_1.jpg)
+[<img src="screenshots/20230319194452_1.jpg" width="512" />](screenshots/20230319194452_1.jpg)
