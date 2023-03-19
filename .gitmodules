@@ -1,3 +1,6 @@
 [submodule "types"]
 	path = types
 	url = https://github.com/Janne252/coh3-scar-types
+[submodule "core"]
+	path = core
+	url = git@github.com:Janne252/coh3-scar-core.git
