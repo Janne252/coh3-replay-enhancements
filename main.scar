@@ -455,7 +455,6 @@ function ReplayEnhancements_UpdateUIDataContext()
 end
 
 function _ReplayEnhancements_Command_ToggleFogOfWar()
-    print('_ReplayEnhancements_Command_ToggleFogOfWar')
     __ReplayEnhancements_UIDataContext.IsFoWEnabled = not __ReplayEnhancements_UIDataContext.IsFoWEnabled
     if __ReplayEnhancements_UIDataContext.IsFoWEnabled then
         FOW_UIUnRevealAll()
