@@ -20,31 +20,33 @@ __ReplayEnhancements_UIDataContext = {
 }
 
 function ReplayEnhancements_InitUIDataContext()
-for index = 1, World_GetPlayerCount() do
-    local player = World_GetPlayerAt(index)
-    local team = Player_GetTeam(player)
-    table.insert(__ReplayEnhancements_UIDataContext.Players, {
-        id = Player_GetID(player),
-        index = index,
-        displayName = Player_GetDisplayName(player),
-        foreground = UI_GetColourAsString(Player_GetUIColour(player)),
-    })
-    print(string.format('team: %s, index: %s, id: %s, name: %s, race: %s', 
-        team, 
-        index, 
-        Player_GetID(player), 
-        Loc_ToAnsi(Player_GetDisplayName(player)), 
-        Player_GetRaceName(player)
-    ))
-end
-    __ReplayEnhancements_UIDataContext.SelectedPlayer = __ReplayEnhancements_UIDataContext.Players[1]
+    local current_player_index = 1
+    local local_player_id = Game_GetLocalPlayerID()
+    for index = 1, World_GetPlayerCount() do
+        local player = World_GetPlayerAt(index)
+        local player_id = Player_GetID(player)
+        local team = Player_GetTeam(player)
+        local is_current_player = player_id == local_player_id
+        table.insert(__ReplayEnhancements_UIDataContext.Players, {
+            id = player_id,
+            index = index,
+            display_name = Player_GetDisplayName(player),
+            foreground = UI_GetColourAsString(Player_GetUIColour(player)),
+            ui_index = ({0, 4, 1, 5, 2, 6, 3, 7})[index],
+            race_icon = BP_GetRaceInfo(Player_GetRace(player)).icon,
+        })
+        if is_current_player then
+            current_player_index = #__ReplayEnhancements_UIDataContext.Players 
+        end
+    end
+    __ReplayEnhancements_UIDataContext.SelectedPlayer = __ReplayEnhancements_UIDataContext.Players[current_player_index]
 end
 
- function ReplayEnhancements_HideAmbientBuildingMinimapIcons()
+function ReplayEnhancements_HideAmbientBuildingMinimapIcons()
     local eg_ambient_buildings = EGroup_CreateUnique()
     for i = 0, World_GetNumEntities() - 1 do
         local entity = World_GetEntity(i)
-        if World_OwnsEntity(entity) and Entity_IsOfType(entity, 'building') and Entity_GetMaxHoldSquadSlots(entity) > 0 then
+        if Entity_IsValid(Entity_GetID(entity)) and World_OwnsEntity(entity) and Entity_IsOfType(entity, 'building') and Entity_GetMaxHoldSquadSlots(entity) > 0 then
             EGroup_Add(eg_ambient_buildings, entity)
         end
     end
@@ -59,7 +61,12 @@ function ReplayEnhancements_UIInit()
             Margin="0,0,860,0"
         >
         <Grid.Resources>
-            <Style x:Key="SelectPlayerItem" TargetType="{x:Type TextBlock}">
+            <Style x:Key="SelectPlayerRaceIcon" TargetType="{x:Type Image}">
+                <Setter Property="Width" Value="16" />
+                <Setter Property="Height" Value="16" />
+                <Setter Property="Margin" Value="8,0,0,0" />
+            </Style>
+            <Style x:Key="SelectPlayerDisplayName" TargetType="{x:Type TextBlock}">
                 <Setter Property="Margin" Value="12,6,12,6" />
                 <Setter Property="FontFamily" Value="{DynamicResource VinylAllCaps}" />
             </Style>
@@ -328,18 +335,65 @@ function ReplayEnhancements_UIInit()
                         Name="SelectedPlayer"
                     >
                         <!-- No other apparent way of getting Selected event with data. -->
-                        <ComboBoxItem Name="1" Visibility="{Binding [Players][0], Converter={StaticResource NotNullToVis}, FallbackValue=Collapsed}"><TextBlock Text="{Binding [Players][0][displayName]}" Foreground="{Binding [Players][0][foreground]}" Style="{StaticResource SelectPlayerItem}" /></ComboBoxItem>
-                        <ComboBoxItem Name="3" Visibility="{Binding [Players][2], Converter={StaticResource NotNullToVis}, FallbackValue=Collapsed}"><TextBlock Text="{Binding [Players][2][displayName]}" Foreground="{Binding [Players][2][foreground]}" Style="{StaticResource SelectPlayerItem}" /></ComboBoxItem>
-                        <ComboBoxItem Name="5" Visibility="{Binding [Players][4], Converter={StaticResource NotNullToVis}, FallbackValue=Collapsed}"><TextBlock Text="{Binding [Players][4][displayName]}" Foreground="{Binding [Players][4][foreground]}" Style="{StaticResource SelectPlayerItem}" /></ComboBoxItem>
-                        <ComboBoxItem Name="7" Visibility="{Binding [Players][6], Converter={StaticResource NotNullToVis}, FallbackValue=Collapsed}"><TextBlock Text="{Binding [Players][6][displayName]}" Foreground="{Binding [Players][6][foreground]}" Style="{StaticResource SelectPlayerItem}" /></ComboBoxItem>
-                        <ComboBoxItem Name="2" Visibility="{Binding [Players][1], Converter={StaticResource NotNullToVis}, FallbackValue=Collapsed}"><TextBlock Text="{Binding [Players][1][displayName]}" Foreground="{Binding [Players][1][foreground]}" Style="{StaticResource SelectPlayerItem}" /></ComboBoxItem>
-                        <ComboBoxItem Name="4" Visibility="{Binding [Players][3], Converter={StaticResource NotNullToVis}, FallbackValue=Collapsed}"><TextBlock Text="{Binding [Players][3][displayName]}" Foreground="{Binding [Players][3][foreground]}" Style="{StaticResource SelectPlayerItem}" /></ComboBoxItem>
-                        <ComboBoxItem Name="6" Visibility="{Binding [Players][5], Converter={StaticResource NotNullToVis}, FallbackValue=Collapsed}"><TextBlock Text="{Binding [Players][5][displayName]}" Foreground="{Binding [Players][5][foreground]}" Style="{StaticResource SelectPlayerItem}" /></ComboBoxItem>
-                        <ComboBoxItem Name="8" Visibility="{Binding [Players][7], Converter={StaticResource NotNullToVis}, FallbackValue=Collapsed}"><TextBlock Text="{Binding [Players][7][displayName]}" Foreground="{Binding [Players][7][foreground]}" Style="{StaticResource SelectPlayerItem}" /></ComboBoxItem>
+                        <ComboBoxItem Name="1" DataContext="{Binding [Players][0]}" Visibility="{Binding [id], Converter={StaticResource NotNullToVis}, FallbackValue=Collapsed}">
+                            <StackPanel Orientation="Horizontal">
+                                <Image Source="{Binding [race_icon]}" Style="{StaticResource SelectPlayerRaceIcon}" />
+                                <TextBlock Text="{Binding [display_name]}" Foreground="{Binding [foreground]}" Style="{StaticResource SelectPlayerDisplayName}" />
+                            </StackPanel>
+                        </ComboBoxItem>
+                        <ComboBoxItem Name="3" DataContext="{Binding [Players][2]}" Visibility="{Binding [id], Converter={StaticResource NotNullToVis}, FallbackValue=Collapsed}">
+                            <StackPanel Orientation="Horizontal">
+                                <Image Source="{Binding [race_icon]}" Style="{StaticResource SelectPlayerRaceIcon}" />
+                                <TextBlock Text="{Binding [display_name]}" Foreground="{Binding [foreground]}" Style="{StaticResource SelectPlayerDisplayName}" />
+                            </StackPanel>
+                        </ComboBoxItem>
+                        <ComboBoxItem Name="5" DataContext="{Binding [Players][4]}" Visibility="{Binding [id], Converter={StaticResource NotNullToVis}, FallbackValue=Collapsed}">
+                            <StackPanel Orientation="Horizontal">
+                                <Image Source="{Binding [race_icon]}" Style="{StaticResource SelectPlayerRaceIcon}" />
+                                <TextBlock Text="{Binding [display_name]}" Foreground="{Binding [foreground]}" Style="{StaticResource SelectPlayerDisplayName}" />
+                            </StackPanel>
+                        </ComboBoxItem>
+                        <ComboBoxItem Name="7" DataContext="{Binding [Players][6]}" Visibility="{Binding [id], Converter={StaticResource NotNullToVis}, FallbackValue=Collapsed}">
+                            <StackPanel Orientation="Horizontal">
+                                <Image Source="{Binding [race_icon]}" Style="{StaticResource SelectPlayerRaceIcon}" />
+                                <TextBlock Text="{Binding [display_name]}" Foreground="{Binding [foreground]}" Style="{StaticResource SelectPlayerDisplayName}" />
+                            </StackPanel>
+                        </ComboBoxItem>
+                        <ComboBoxItem Name="2" DataContext="{Binding [Players][1]}" Visibility="{Binding [id], Converter={StaticResource NotNullToVis}, FallbackValue=Collapsed}">
+                            <StackPanel Orientation="Horizontal">
+                                <Image Source="{Binding [race_icon]}" Style="{StaticResource SelectPlayerRaceIcon}" />
+                                <TextBlock Text="{Binding [display_name]}" Foreground="{Binding [foreground]}" Style="{StaticResource SelectPlayerDisplayName}" />
+                            </StackPanel>
+                        </ComboBoxItem>
+                        <ComboBoxItem Name="4" DataContext="{Binding [Players][3]}" Visibility="{Binding [id], Converter={StaticResource NotNullToVis}, FallbackValue=Collapsed}">
+                            <StackPanel Orientation="Horizontal">
+                                <Image Source="{Binding [race_icon]}" Style="{StaticResource SelectPlayerRaceIcon}" />
+                                <TextBlock Text="{Binding [display_name]}" Foreground="{Binding [foreground]}" Style="{StaticResource SelectPlayerDisplayName}" />
+                            </StackPanel>
+                        </ComboBoxItem>
+                        <ComboBoxItem Name="6" DataContext="{Binding [Players][5]}" Visibility="{Binding [id], Converter={StaticResource NotNullToVis}, FallbackValue=Collapsed}">
+                            <StackPanel Orientation="Horizontal">
+                                <Image Source="{Binding [race_icon]}" Style="{StaticResource SelectPlayerRaceIcon}" />
+                                <TextBlock Text="{Binding [display_name]}" Foreground="{Binding [foreground]}" Style="{StaticResource SelectPlayerDisplayName}" />
+                            </StackPanel>
+                        </ComboBoxItem>
+                        <ComboBoxItem Name="8" DataContext="{Binding [Players][7]}" Visibility="{Binding [id], Converter={StaticResource NotNullToVis}, FallbackValue=Collapsed}">
+                            <StackPanel Orientation="Horizontal">
+                                <Image Source="{Binding [race_icon]}" Style="{StaticResource SelectPlayerRaceIcon}" />
+                                <TextBlock Text="{Binding [display_name]}" Foreground="{Binding [foreground]}" Style="{StaticResource SelectPlayerDisplayName}" />
+                            </StackPanel>
+                        </ComboBoxItem>
                     </ComboBox>
-                    <TextBlock FontSize="16" Grid.Column="0" Name="SelectedPlayerDisplay" VerticalAlignment="Center" Margin="8,0,0,0" FontFamily="{DynamicResource VinylAllCaps}" IsHitTestVisible="False" />
+                    <StackPanel Grid.Column="0" VerticalAlignment="Center" Orientation="Horizontal">
+                        <Image Source="{Binding [SelectedPlayer][race_icon]}" Width="24" Height="24" Margin="8,0,0,0" />
+                        <TextBlock 
+                            FontSize="16" Grid.Column="0" Name="SelectedPlayerDisplay" VerticalAlignment="Center" Margin="8,0,0,0" FontFamily="{DynamicResource VinylAllCaps}" IsHitTestVisible="False"
+                            Text="{Binding [SelectedPlayer][display_name]}"
+                            Foreground="{Binding [SelectedPlayer][foreground]}"
+                        />
+                    </StackPanel>
                 </Grid>
-                <CheckBox Name="IsFoWEnabled" Grid.Row="1" Grid.Column="0" Style="{StaticResource CoreCheckboxStyle}" Command="{Binding [Commands][ToggleFogOfWar]}">
+                <CheckBox Name="IsFoWEnabled" Grid.Row="1" Grid.Column="0" Style="{StaticResource CoreCheckboxStyle}" Command="{Binding [Commands][ToggleFogOfWar]}" IsChecked="{Binding [IsFoWEnabled]}">
                     Fog of War
                 </CheckBox>
                 <StackPanel Grid.Row="1" Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right">
@@ -358,7 +412,10 @@ function ReplayEnhancements_UIInit()
                         BorderBrush="{StaticResource Gray10Brush}"
                     />
                 
-                    <TextBlock Name="SimulationSpeedDisplay" MinWidth="60" TextAlignment="Center" FontSize="16" Foreground="White" FontFamily="monospace" VerticalAlignment="Center" />
+                    <TextBlock 
+                        Name="SimulationSpeedDisplay" MinWidth="60" TextAlignment="Center" FontSize="16" Foreground="White" FontFamily="monospace" VerticalAlignment="Center"
+                        Text="{Binding [SimulationRate][display]}"
+                    />
                 
                     <MenuItem 
                         Style="{StaticResource SubMenuItem}" 
@@ -386,16 +443,15 @@ function ReplayEnhancements_UIInit()
     UI_AddEventHandler(__ReplayEnhancements_UIDataContext.Namespace .. '.SelectedPlayer.6', 'Selected', '_ReplayEnhancements_Command_SetSelectedPlayer')
     UI_AddEventHandler(__ReplayEnhancements_UIDataContext.Namespace .. '.SelectedPlayer.7', 'Selected', '_ReplayEnhancements_Command_SetSelectedPlayer')
     UI_AddEventHandler(__ReplayEnhancements_UIDataContext.Namespace .. '.SelectedPlayer.8', 'Selected', '_ReplayEnhancements_Command_SetSelectedPlayer')
+    UI_SetPropertyValue(__ReplayEnhancements_UIDataContext.Namespace .. '.SelectedPlayer', 'SelectedIndex', __ReplayEnhancements_UIDataContext.SelectedPlayer.ui_index)
 end
 
 function ReplayEnhancements_UpdateUIDataContext()
-    -- Updating data context with UI_SetDataContext causes the combobox with bound foreground color to lose color and become transparent
-    -- until mouse-overed
-    UI_SetPropertyValue(__ReplayEnhancements_UIDataContext.Namespace .. '.IsFoWEnabled', 'IsChecked', __ReplayEnhancements_UIDataContext.IsFoWEnabled)
-    UI_SetPropertyValue(__ReplayEnhancements_UIDataContext.Namespace .. '.SimulationSpeedDisplay', 'Text', __ReplayEnhancements_UIDataContext.SimulationRate.display)
-
-    UI_SetPropertyValue(__ReplayEnhancements_UIDataContext.Namespace .. '.SelectedPlayerDisplay', 'Text', __ReplayEnhancements_UIDataContext.SelectedPlayer.displayName)
-    UI_SetPropertyValue(__ReplayEnhancements_UIDataContext.Namespace .. '.SelectedPlayerDisplay', 'Foreground', __ReplayEnhancements_UIDataContext.SelectedPlayer.foreground)
+    for index = 1, World_GetPlayerCount() do
+        local player = World_GetPlayerAt(index)
+        __ReplayEnhancements_UIDataContext.Players[index].foreground = UI_GetColourAsString(Player_GetUIColour(player))
+    end
+    UI_SetDataContext(__ReplayEnhancements_UIDataContext.Namespace, __ReplayEnhancements_UIDataContext)
 end
 
 function _ReplayEnhancements_Command_ToggleFogOfWar()
@@ -410,7 +466,6 @@ function _ReplayEnhancements_Command_ToggleFogOfWar()
 end
 
 function _ReplayEnhancements_Command_ChangeSimulationRate(rate)
-    print('_ReplayEnhancements_Command_ChangeSimulationRate')
     if rate == '+' then
         __ReplayEnhancements_UIDataContext.SimulationRate.rate = math.min(__ReplayEnhancements_UIDataContext.SimulationRate.maximum, __ReplayEnhancements_UIDataContext.SimulationRate.rate * 2)
     elseif rate == '-' then
@@ -425,13 +480,28 @@ end
 
 ---@param parameter string
 function _ReplayEnhancements_Command_SetSelectedPlayer(parameter)
+    local local_player_id = Game_GetLocalPlayerID()
     local index = tonumber(parameter) --[[@as number]]
-    if Game_GetLocalPlayerID() ~= __ReplayEnhancements_UIDataContext.Players[index].id then
+    if __ReplayEnhancements_UIDataContext.Players[index].id ~= local_player_id then
         Game_RequestSetLocalPlayer(World_GetPlayerAt(index))
         __ReplayEnhancements_UIDataContext.SelectedPlayer = __ReplayEnhancements_UIDataContext.Players[index]
     end
     
     ReplayEnhancements_UpdateUIDataContext()
+    if Rule_Exists(ReplayEnhancements_LocalPlayerChanged) then
+        Rule_Remove(ReplayEnhancements_LocalPlayerChanged)
+    end
+    Rule_Add(ReplayEnhancements_LocalPlayerChanged, {local_player_id = local_player_id})
+end
+
+function ReplayEnhancements_LocalPlayerChanged(context, data)
+    -- Update player colors and VP tickers UI when the request to change the local player has completed
+    if data.local_player_id ~= Game_GetLocalPlayerID() then
+        ReplayEnhancements_UpdateUIDataContext()
+        -- Sync tickers UI once
+        VictoryPoint_OnGameRestore()
+        Rule_RemoveMe()
+    end
 end
 
 ReplayEnhancements_InitUIDataContext()
