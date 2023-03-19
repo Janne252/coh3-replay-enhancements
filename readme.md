@@ -19,6 +19,9 @@
 - Switch player perspective
 - Toggle Fog of War On/Off
 - Adjust playback speed: `0.125x`, `0.25x`, `0.5x`, `1x` (default), `2x`, `4x`, and `8x`
+
+<br />
+
 [<img src="screenshots/20230319194449_1.jpg" width="512" />](screenshots/20230319194449_1.jpg)
 [<img src="screenshots/20230319194451_1.jpg" width="512" />](screenshots/20230319194451_1.jpg)
 [<img src="screenshots/20230319194452_1.jpg" width="512" />](screenshots/20230319194452_1.jpg)
