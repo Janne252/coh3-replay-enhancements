@@ -14,6 +14,11 @@
     - e.g. `consoleKey = CONTROL+SHIFT+SPACE` should work with almost any keyboard regardless of the keyboard layout if the default `Ctrl+Shift+Grave` doesn't work
 1. Close the in-game console & unpause the game
 
+# Features
+- Removal of ambient building minimap icons (white squares)
+- Switch player perspective
+- Toggle Fog of War On/Off
+- Adjust playback speed: `0.125x`, `0.25x`, `0.5x`, `1x` (default), `2x`, `4x`, and `8x`
 [<img src="screenshots/20230319194449_1.jpg" width="512" />](screenshots/20230319194449_1.jpg)
 [<img src="screenshots/20230319194451_1.jpg" width="512" />](screenshots/20230319194451_1.jpg)
 [<img src="screenshots/20230319194452_1.jpg" width="512" />](screenshots/20230319194452_1.jpg)
