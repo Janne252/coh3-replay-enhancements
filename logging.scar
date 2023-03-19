@@ -1,0 +1,33 @@
+loadfile('replay-enhancements/core/core.scar')()
+Janne252_Core.load({
+    relativeRoot = 'replay-enhancements/core/',
+    absoluteRoot = 'replay-enhancements/core/',
+})
+
+function ReplayEnhancements_AddEventListeners()
+    for index = 1, World_GetPlayerCount() do
+        local player = World_GetPlayerAt(index)
+        Rule_AddPlayerEvent(ReplayEnhancements_PlayerCommandIssued, player, GE_PlayerCommandIssued)
+    end
+
+    Rule_AddGlobalEvent(ReplayEnhancements_EntityCommandIssued, GE_EntityCommandIssued)
+    Rule_AddGlobalEvent(ReplayEnhancements_SquadCommandIssued, GE_SquadCommandIssued)
+end
+
+function ReplayEnhancements_PlayerCommandIssued(caster, command, ...)
+    ReplayEnhancements_Log('PlayerCommandIssued', {caster = caster, command = command, data = {...}})
+end
+
+function ReplayEnhancements_EntityCommandIssued(context, ...)
+    ReplayEnhancements_Log('EntityCommandIssued', {context = context, data = {...}})
+end
+
+function ReplayEnhancements_SquadCommandIssued(context, ...)
+    ReplayEnhancements_Log('SquadCommandIssued', {context = context, data = {...}})
+end
+
+function ReplayEnhancements_Log(event, data)
+    printfs('[RE] %s', sjson.encode(table.merge({event = event}, data)))
+end
+
+ReplayEnhancements_AddEventListeners()

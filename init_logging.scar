@@ -1,0 +1,2 @@
+loadfile('replay-enhancements/init.scar')()
+Scar_DoString([[loadfile('replay-enhancements/logging.scar')()]])
