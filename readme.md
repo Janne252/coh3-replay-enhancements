@@ -2,12 +2,11 @@
 # Usage
 1. Extract the contents of the latest [release](https://github.com/Janne252/coh3-replay-enhancements/releases) `replay-enhancements.zip` to the Company of Heroes 3 install directory
     > Make sure that the path to the `init.scar` file is `<..>\steamapps\common\Company of Heroes 3\replay-enhancements\init.scar`
-1. Set game launch options
-    ```
-    -dev -replay playback:<replay>.rec
-    ```
-    > See https://cohdb.com/info for more detailed instructions of how the game launch options work
-1. Load up a replay by launching the game
+1. Load up a replay by
+    1. Dragging a .rec file onto LaunchCoH3Replay.bat
+        > Copy [LaunchCoH3Replay.bat](https://github.com/Janne252/coh3-replay-enhancements/blob/master/LaunchCoH3Replay.bat) to your replay folder (e.g. `Documents\My Games\Company of Heroes 3\playback\`) for easy access.
+    1. Or by manually setting the game's launch options to `-dev -replay playback:<replay>.rec`
+        > See https://cohdb.com/info for more detailed instruction
 1. Pause the game as soon as you can by pressing `Esc`
 1. Open the in-game console by pressing **`Ctrl+Shift+Grave`** and paste in 
     ```lua
