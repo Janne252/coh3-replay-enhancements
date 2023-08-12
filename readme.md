@@ -6,7 +6,7 @@
     1. Dragging a .rec file onto LaunchCoH3Replay.bat
         > Copy [LaunchCoH3Replay.bat](https://github.com/Janne252/coh3-replay-enhancements/blob/master/LaunchCoH3Replay.bat) to your replay folder (e.g. `Documents\My Games\Company of Heroes 3\playback\`) for easy access.
     1. Or by manually setting the game's launch options to `-dev -replay playback:<replay>.rec`
-        > See https://cohdb.com/info for more detailed instruction
+        > See https://cohdb.com/info for more detailed instructions.
 1. Pause the game as soon as you can by pressing `Esc`
 1. Open the in-game console by pressing **`Ctrl+Shift+Grave`** and paste in 
     ```lua
